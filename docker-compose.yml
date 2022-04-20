@@ -1,0 +1,45 @@
+version: '2'
+services:
+  gps-server:
+    container_name: microservice-gps
+    build:
+      context: gpsUtilMs
+      dockerfile: Dockerfile
+    image: gps-server:latest
+    ports:
+      - 9001:9001
+    networks:
+      - spring-cloud-network
+  reward-server:
+    container_name: microservice-reward
+    build:
+      context: rewardcentral
+      dockerfile: Dockerfile
+    image: reward-server:latest
+    ports:
+      - 9002:9002
+    networks:
+      - spring-cloud-network
+  trippricer-server:
+    container_name: microservice-trippricer
+    build:
+      context: trippricer
+      dockerfile: Dockerfile
+    image: trippricer-server:latest
+    ports:
+      - 9003:9003
+    networks:
+      - spring-cloud-network
+  client-server:
+    container_name: microservice-tourguide
+    build:
+      context: tourguide
+      dockerfile: Dockerfile
+    image: microservice-tourguide:latest
+    ports:
+      - 8080:8080
+    networks:
+      - spring-cloud-network
+networks:
+  spring-cloud-network:
+    driver: bridge
