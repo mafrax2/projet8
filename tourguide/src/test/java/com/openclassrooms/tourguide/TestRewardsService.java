@@ -49,7 +49,7 @@ public class TestRewardsService {
 		user.addToVisitedLocations(new VisitedLocationBean(user.getUserId(), attraction, new Date()));
 		tourGuideService.trackUserLocation(user);
 		List<UserReward> userRewards = user.getUserRewards();
-		tourGuideService.tracker.stopTracking();
+//		tourGuideService.tracker.stopTracking();
 		assertTrue(userRewards.size() == 1);
 	}
 
@@ -64,7 +64,7 @@ public class TestRewardsService {
 	
 //	@Ignore // Needs fixed - can throw ConcurrentModificationException
 	@Test
-	public void nearAllAttractions() {
+	public void nearAllAttractions() throws ExecutionException, InterruptedException {
 
 		RewardsService rewardsService = new RewardsService(gpsUtil, rewardCentralProxy);
 		rewardsService.setProximityBuffer(Integer.MAX_VALUE);
@@ -74,7 +74,7 @@ public class TestRewardsService {
 		
 		rewardsService.calculateRewards(tourGuideService.getAllUsers().get(0));
 		List<UserReward> userRewards = tourGuideService.getUserRewards(tourGuideService.getAllUsers().get(0));
-		tourGuideService.tracker.stopTracking();
+//		tourGuideService.tracker.stopTracking();
 
 		assertEquals(gpsUtil.getAttractions().size(), userRewards.size());
 	}

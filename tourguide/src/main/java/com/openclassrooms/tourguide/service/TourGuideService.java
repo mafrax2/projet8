@@ -10,7 +10,6 @@ import com.openclassrooms.tourguide.model.user.User;
 import com.openclassrooms.tourguide.model.user.UserReward;
 import com.openclassrooms.tourguide.proxies.GpsUtilProxy;
 import com.openclassrooms.tourguide.proxies.TriPricerProxy;
-import com.openclassrooms.tourguide.tracker.Tracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -31,7 +30,7 @@ public class TourGuideService {
 	private final GpsUtilProxy gpsUtil;
 
 	private final TriPricerProxy tripPricer;
-	public final Tracker tracker;
+//	public final Tracker tracker;
 	boolean testMode = true;
 	
 	public TourGuideService(GpsUtilProxy gpsUtil, RewardsService rewardsService, TriPricerProxy tripPricer) {
@@ -45,8 +44,8 @@ public class TourGuideService {
 			initializeInternalUsers();
 			logger.debug("Finished initializing users");
 		}
-		tracker = new Tracker(this);
-		addShutDownHook();
+//		tracker = new Tracker(this);
+//		addShutDownHook();
 	}
 
 	public List<UserReward> getUserRewards(User user) {
@@ -81,17 +80,43 @@ public class TourGuideService {
 		user.setTripDeals(providers);
 		return providers;
 	}
-	
+
+	public void trackAllUserLocation(List<User> users) throws ExecutionException, InterruptedException {
+
+		List<CompletableFuture> rewardFutures = new ArrayList<>();
+
+		for (User user: users
+			 ) {
+			CompletableFuture future = CompletableFuture.supplyAsync(() -> gpsUtil.getUserLocation(user.getUserId()))
+					.thenAccept(v -> {
+						user.addToVisitedLocations((v));
+					})
+					.thenRun(() -> rewardsService.calculateRewards(user));
+
+			rewardFutures.add(future);
+		}
+
+		CompletableFuture<Void> allFutures = CompletableFuture
+				.allOf(rewardFutures.toArray(new CompletableFuture[rewardFutures.size()]));
+
+
+		allFutures.get();
+		System.out.println("lol");
+
+	}
+
 	public VisitedLocationBean trackUserLocation(User user) throws ExecutionException, InterruptedException {
 
-			VisitedLocationBean visitedLocation = gpsUtil.getUserLocation(user.getUserId());
-			user.addToVisitedLocations(visitedLocation);
-//		rewardsService.calculateRewards(user);
+		VisitedLocationBean visitedLocation = gpsUtil.getUserLocation(user.getUserId());
+		user.addToVisitedLocations(visitedLocation);
+		rewardsService.calculateRewards(user);
 
-
-		CompletableFuture.runAsync(() -> rewardsService.calculateRewards(user)).completeAsync(()-> null);
 
 		return visitedLocation;
+	}
+
+	public CompletableFuture addUserRewards(User user){
+		return CompletableFuture.runAsync(() -> rewardsService.calculateRewards(user));
 	}
 
 
@@ -106,13 +131,13 @@ public class TourGuideService {
 		return nearbyAttractions;
 	}
 	
-	private void addShutDownHook() {
-		Runtime.getRuntime().addShutdownHook(new Thread() { 
-		      public void run() {
-		        tracker.stopTracking();
-		      } 
-		    }); 
-	}
+//	private void addShutDownHook() {
+//		Runtime.getRuntime().addShutdownHook(new Thread() {
+//		      public void run() {
+//		        tracker.stopTracking();
+//		      }
+//		    });
+//	}
 	
 	/**********************************************************************************
 	 * 

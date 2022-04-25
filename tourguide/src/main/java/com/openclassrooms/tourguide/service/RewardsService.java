@@ -10,9 +10,7 @@ import com.openclassrooms.tourguide.proxies.RewardCentralProxy;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
+import java.util.concurrent.*;
 
 @Service
 public class RewardsService {
@@ -25,12 +23,13 @@ public class RewardsService {
 	private int proximityBuffer = defaultProximityBuffer;
 	private int attractionProximityRange = 200;
 
-	private AtomicReference<List<UserReward>> userRewards;
+	private List<AttractionBean> attractions;
 
 	
 	public RewardsService(GpsUtilProxy gpsUtil, RewardCentralProxy rewardCentral) {
 		this.gpsUtil = gpsUtil;
 		this.rewardsCentral = rewardCentral;
+		this.attractions = gpsUtil.getAttractions();
 	}
 	
 	public void setProximityBuffer(int proximityBuffer) {
@@ -43,32 +42,43 @@ public class RewardsService {
 
 	public void calculateRewards(User user) {
 		List<VisitedLocationBean> userLocations = user.getVisitedLocations();
-		List<AttractionBean> attractions = gpsUtil.getAttractions();
 
-		for(VisitedLocationBean visitedLocation : userLocations) {
-			for(AttractionBean attraction : attractions) {
-				if(user.getUserRewards().stream().filter(r -> r.attraction.attractionName.equals(attraction.attractionName)).count() == 0) {
-					if(nearAttraction(visitedLocation, attraction)) {
-						user.addUserReward(new UserReward(visitedLocation, attraction, getRewardPoints(attraction, user)));
-					}
-				}
+//		CopyOnWriteArrayList<UserReward> userRewards = new CopyOnWriteArrayList<>();
+//		userRewards.addAll(user.getUserRewards());
+
+//		for(VisitedLocationBean visitedLocation : userLocations) {
+//			}
+		userLocations.parallelStream().forEach( visitedLocation ->{
+			AttractionBean attractionBean = nearAttraction(visitedLocation);
+			if(attractionBean!=null) {
+				user.addUserReward(new UserReward(visitedLocation, attractionBean, getRewardPoints(attractionBean, user)));
+				System.out.println("adding reward to thread: " + Thread.currentThread().getName());
 			}
-		}
+				}
+		);
 
+
+//		return userRewards;
+	}
+
+	public void calculateAllRewards(List<User> users) throws ExecutionException, InterruptedException {
+
+		List<CompletableFuture> rewardFutures = new CopyOnWriteArrayList<>();
+
+		ExecutorService pool = Executors.newFixedThreadPool(10);
+
+		users.stream().forEach(u -> {
+			rewardFutures.add(CompletableFuture.runAsync(() -> calculateRewards(u)));});
+
+		CompletableFuture<Void> allFutures = CompletableFuture
+				.allOf(rewardFutures.toArray(new CompletableFuture[rewardFutures.size()]));
+
+		allFutures.get();
+
+		System.out.println("lol");
 	}
 
 	private void filterRewards(List<VisitedLocationBean> userLocations, List<AttractionBean> attractions, User user) {
-
-		for(VisitedLocationBean visitedLocation : userLocations) {
-			attractions.stream().parallel().filter(a -> nearAttraction(visitedLocation,a)).forEach(a-> user.addUserReward(new UserReward(visitedLocation, a, getRewardPoints(a, user))));
-
-		}
-
-		Predicate<AttractionBean> notIn1 = s -> user.getUserRewards().stream().noneMatch(mc -> mc.attraction.attractionName.equals(s.attractionName));
-		List<AttractionBean> attractionsNotinUserReWards = attractions.stream().filter(notIn1).collect(Collectors.toList());
-
-		Predicate<AttractionBean> near = s -> userLocations.stream().allMatch(mc -> nearAttraction(mc, s));
-		List<AttractionBean> attractionsNearbyNotInUserRewards = attractionsNotinUserReWards.stream().filter(near).collect(Collectors.toList());
 
 
 
@@ -81,6 +91,12 @@ public class RewardsService {
 	private boolean nearAttraction(VisitedLocationBean visitedLocation, AttractionBean attraction) {
 		return getDistance(attraction, visitedLocation.location) > proximityBuffer ? false : true;
 	}
+
+	private AttractionBean nearAttraction(VisitedLocationBean visitedLocation) {
+		AttractionBean attractionBean = attractions.parallelStream().filter(a -> getDistance(a, visitedLocation.location) > proximityBuffer ? false : true).findAny().orElse(null);
+		return attractionBean;
+	}
+
 	
 	private int getRewardPoints(AttractionBean attraction, User user) {
 		return rewardsCentral.getAttractionRewardPoints(attraction.attractionId, user.getUserId());
