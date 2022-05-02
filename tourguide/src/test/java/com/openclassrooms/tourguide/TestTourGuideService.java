@@ -22,120 +22,115 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(
-		webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class TestTourGuideService {
 
 
-	@Autowired
-	private GpsUtilProxy gpsUtil;
+    @Autowired
+    private GpsUtilProxy gpsUtil;
 
-	@Autowired
-	private RewardCentralProxy rewardCentralProxy;
+    @Autowired
+    private RewardCentralProxy rewardCentralProxy;
 
-	@Autowired
-	private TriPricerProxy triPricerProxy;
+    @Autowired
+    private TriPricerProxy triPricerProxy;
 
-	@Test
-	public void getUserLocation() throws ExecutionException, InterruptedException {
+    @Test
+    public void getUserLocation() throws ExecutionException, InterruptedException {
 
-		RewardsService rewardsService = new RewardsService(gpsUtil, rewardCentralProxy);
-		InternalTestHelper.setInternalUserNumber(0);
-		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService, triPricerProxy);
-		
-		User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
-		VisitedLocationBean visitedLocation = tourGuideService.trackUserLocation(user);
-//		tourGuideService.tracker.stopTracking();
-		assertTrue(visitedLocation.userId.equals(user.getUserId()));
-	}
-	
-	@Test
-	public void addUser() {
+        RewardsService rewardsService = new RewardsService(gpsUtil, rewardCentralProxy);
+        InternalTestHelper.setInternalUserNumber(0);
+        TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService, triPricerProxy);
 
-		RewardsService rewardsService = new RewardsService(gpsUtil, rewardCentralProxy);
-		InternalTestHelper.setInternalUserNumber(0);
-		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService, triPricerProxy);
-		
-		User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
-		User user2 = new User(UUID.randomUUID(), "jon2", "000", "jon2@tourGuide.com");
+        User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
+        VisitedLocationBean visitedLocation = tourGuideService.trackUserLocation(user);
 
-		tourGuideService.addUser(user);
-		tourGuideService.addUser(user2);
-		
-		User retrivedUser = tourGuideService.getUser(user.getUserName());
-		User retrivedUser2 = tourGuideService.getUser(user2.getUserName());
+        assertTrue(visitedLocation.userId.equals(user.getUserId()));
+    }
 
-//		tourGuideService.tracker.stopTracking();
-		
-		assertEquals(user, retrivedUser);
-		assertEquals(user2, retrivedUser2);
-	}
-	
-	@Test
-	public void getAllUsers() {
+    @Test
+    public void addUser() {
 
-		RewardsService rewardsService = new RewardsService(gpsUtil, rewardCentralProxy);
-		InternalTestHelper.setInternalUserNumber(0);
-		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService, triPricerProxy);
-		
-		User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
-		User user2 = new User(UUID.randomUUID(), "jon2", "000", "jon2@tourGuide.com");
+        RewardsService rewardsService = new RewardsService(gpsUtil, rewardCentralProxy);
+        InternalTestHelper.setInternalUserNumber(0);
+        TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService, triPricerProxy);
 
-		tourGuideService.addUser(user);
-		tourGuideService.addUser(user2);
-		
-		List<User> allUsers = tourGuideService.getAllUsers();
+        User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
+        User user2 = new User(UUID.randomUUID(), "jon2", "000", "jon2@tourGuide.com");
 
-//		tourGuideService.tracker.stopTracking();
-		
-		assertTrue(allUsers.contains(user));
-		assertTrue(allUsers.contains(user2));
-	}
-	
-	@Test
-	public void trackUser() throws ExecutionException, InterruptedException {
-		RewardsService rewardsService = new RewardsService(gpsUtil, rewardCentralProxy);
-		InternalTestHelper.setInternalUserNumber(0);
-		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService, triPricerProxy);
-		
-		User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
-		VisitedLocationBean visitedLocation = tourGuideService.trackUserLocation(user);
-		
-//		tourGuideService.tracker.stopTracking();
-		
-		assertEquals(user.getUserId(), visitedLocation.userId);
-	}
-	
-	//@Ignore // Not yet implemented
-	@Test
-	public void getNearbyAttractions() throws ExecutionException, InterruptedException {
-		RewardsService rewardsService = new RewardsService(gpsUtil, rewardCentralProxy);
-		InternalTestHelper.setInternalUserNumber(0);
-		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService, triPricerProxy);
-		
-		User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
-		VisitedLocationBean visitedLocation = tourGuideService.trackUserLocation(user);
-		
-		List<AttractionBean> attractions = tourGuideService.getNearByAttractions(visitedLocation);
-		
-//		tourGuideService.tracker.stopTracking();
-		
-		assertEquals(5, attractions.size());
-	}
+        tourGuideService.addUser(user);
+        tourGuideService.addUser(user2);
 
-	@Test
-	public void getTripDeals() {
-		RewardsService rewardsService = new RewardsService(gpsUtil, rewardCentralProxy);
-		InternalTestHelper.setInternalUserNumber(0);
-		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService, triPricerProxy);
-		
-		User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
+        User retrivedUser = tourGuideService.getUser(user.getUserName());
+        User retrivedUser2 = tourGuideService.getUser(user2.getUserName());
 
-		List<ProviderBean> providers = tourGuideService.getTripDeals(user);
-		
-//		tourGuideService.tracker.stopTracking();
-		
-		assertEquals(10, providers.size());
-	}
-	
-	
+
+        assertEquals(user, retrivedUser);
+        assertEquals(user2, retrivedUser2);
+    }
+
+    @Test
+    public void getAllUsers() {
+
+        RewardsService rewardsService = new RewardsService(gpsUtil, rewardCentralProxy);
+        InternalTestHelper.setInternalUserNumber(0);
+        TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService, triPricerProxy);
+
+        User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
+        User user2 = new User(UUID.randomUUID(), "jon2", "000", "jon2@tourGuide.com");
+
+        tourGuideService.addUser(user);
+        tourGuideService.addUser(user2);
+
+        List<User> allUsers = tourGuideService.getAllUsers();
+
+
+        assertTrue(allUsers.contains(user));
+        assertTrue(allUsers.contains(user2));
+    }
+
+    @Test
+    public void trackUser() throws ExecutionException, InterruptedException {
+        RewardsService rewardsService = new RewardsService(gpsUtil, rewardCentralProxy);
+        InternalTestHelper.setInternalUserNumber(0);
+        TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService, triPricerProxy);
+
+        User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
+        VisitedLocationBean visitedLocation = tourGuideService.trackUserLocation(user);
+
+
+        assertEquals(user.getUserId(), visitedLocation.userId);
+    }
+
+    //@Ignore // Not yet implemented
+    @Test
+    public void getNearbyAttractions() throws ExecutionException, InterruptedException {
+        RewardsService rewardsService = new RewardsService(gpsUtil, rewardCentralProxy);
+        InternalTestHelper.setInternalUserNumber(0);
+        TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService, triPricerProxy);
+
+        User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
+        VisitedLocationBean visitedLocation = tourGuideService.trackUserLocation(user);
+
+        List<AttractionBean> attractions = tourGuideService.getNearByAttractions(visitedLocation);
+
+
+        assertEquals(5, attractions.size());
+    }
+
+    @Test
+    public void getTripDeals() {
+        RewardsService rewardsService = new RewardsService(gpsUtil, rewardCentralProxy);
+        InternalTestHelper.setInternalUserNumber(0);
+        TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService, triPricerProxy);
+
+        User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
+
+        List<ProviderBean> providers = tourGuideService.getTripDeals(user);
+
+
+        assertEquals(5, providers.size());
+    }
+
+
 }

@@ -71,7 +71,7 @@ public class User {
 	}
 	
 	public List<UserReward> addUserReward(UserReward userReward) {
-		if(userRewards.parallelStream().filter(r -> !r.attraction.attractionName.equals(userReward.attraction)).count() == 0) {
+		if(userRewards.parallelStream().noneMatch(r -> r.attraction.attractionName.equals(userReward.attraction.attractionName))) {
 			userRewards.add(userReward);
 		}
 		return userRewards;

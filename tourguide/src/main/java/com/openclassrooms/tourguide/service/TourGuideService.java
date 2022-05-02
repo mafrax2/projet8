@@ -2,6 +2,7 @@ package com.openclassrooms.tourguide.service;
 
 
 import com.openclassrooms.tourguide.helper.InternalTestHelper;
+import com.openclassrooms.tourguide.model.RewardTuple;
 import com.openclassrooms.tourguide.model.beans.AttractionBean;
 import com.openclassrooms.tourguide.model.beans.LocationBean;
 import com.openclassrooms.tourguide.model.beans.ProviderBean;
@@ -19,6 +20,8 @@ import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -30,8 +33,10 @@ public class TourGuideService {
 	private final GpsUtilProxy gpsUtil;
 
 	private final TriPricerProxy tripPricer;
-//	public final Tracker tracker;
+
 	boolean testMode = true;
+
+	private ExecutorService executor = Executors.newFixedThreadPool(2000);
 	
 	public TourGuideService(GpsUtilProxy gpsUtil, RewardsService rewardsService, TriPricerProxy tripPricer) {
 		this.gpsUtil = gpsUtil;
@@ -44,8 +49,7 @@ public class TourGuideService {
 			initializeInternalUsers();
 			logger.debug("Finished initializing users");
 		}
-//		tracker = new Tracker(this);
-//		addShutDownHook();
+
 	}
 
 	public List<UserReward> getUserRewards(User user) {
@@ -66,7 +70,15 @@ public class TourGuideService {
 	public List<User> getAllUsers() {
 		return internalUserMap.values().stream().collect(Collectors.toList());
 	}
-	
+
+	public Map<UUID, LocationBean> getAllUsersLastVisitedLocation(){
+		List<User> allUsers = getAllUsers();
+		HashMap<UUID, LocationBean> map = new HashMap<>();
+		allUsers.forEach(u-> map.put(u.getUserId(), u.getLastVisitedLocation().location));
+		return map;
+	}
+
+
 	public void addUser(User user) {
 		if(!internalUserMap.containsKey(user.getUserName())) {
 			internalUserMap.put(user.getUserName(), user);
@@ -87,11 +99,17 @@ public class TourGuideService {
 
 		for (User user: users
 			 ) {
-			CompletableFuture future = CompletableFuture.supplyAsync(() -> gpsUtil.getUserLocation(user.getUserId()))
+			CompletableFuture future = CompletableFuture.supplyAsync(() -> gpsUtil.getUserLocation(user.getUserId()), executor)
 					.thenAccept(v -> {
 						user.addToVisitedLocations((v));
 					})
-					.thenRun(() -> rewardsService.calculateRewards(user));
+					.thenRun(() -> {
+						try {
+							rewardsService.calculateRewards(user);
+						} catch (InterruptedException | ExecutionException e) {
+							e.printStackTrace();
+						}
+					});
 
 			rewardFutures.add(future);
 		}
@@ -109,35 +127,21 @@ public class TourGuideService {
 
 		VisitedLocationBean visitedLocation = gpsUtil.getUserLocation(user.getUserId());
 		user.addToVisitedLocations(visitedLocation);
-		rewardsService.calculateRewards(user);
+		List<RewardTuple> rewardTuples = rewardsService.calculateRewards(user);
+		rewardTuples.stream().forEach(t -> user.addUserReward(new UserReward(t.getVisitedLocationBean(), t.getAttractionBean(), rewardsService.getRewardPoints(t.getAttractionBean(), user))));
 
 
 		return visitedLocation;
 	}
 
-	public CompletableFuture addUserRewards(User user){
-		return CompletableFuture.runAsync(() -> rewardsService.calculateRewards(user));
-	}
-
 
 	public List<AttractionBean> getNearByAttractions(VisitedLocationBean visitedLocation) {
-		List<AttractionBean> nearbyAttractions = new ArrayList<>();
-		for(AttractionBean attraction : gpsUtil.getAttractions()) {
-			if(rewardsService.isWithinAttractionProximity(attraction, visitedLocation.location)) {
-				nearbyAttractions.add(attraction);
-			}
-		}
-		
+
+		List<AttractionBean> nearbyAttractions = gpsUtil.getAttractions().stream().sorted((a1, a2) -> rewardsService.getDistance(a1, visitedLocation.location).compareTo(rewardsService.getDistance(a2, visitedLocation.location))).collect(Collectors.toList()).subList(0, 5);
 		return nearbyAttractions;
 	}
-	
-//	private void addShutDownHook() {
-//		Runtime.getRuntime().addShutdownHook(new Thread() {
-//		      public void run() {
-//		        tracker.stopTracking();
-//		      }
-//		    });
-//	}
+
+
 	
 	/**********************************************************************************
 	 * 

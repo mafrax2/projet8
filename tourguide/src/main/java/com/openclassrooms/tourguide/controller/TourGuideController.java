@@ -1,6 +1,8 @@
 package com.openclassrooms.tourguide.controller;
 
 import com.jsoniter.output.JsonStream;
+import com.openclassrooms.tourguide.model.beans.AttractionBean;
+import com.openclassrooms.tourguide.model.beans.LocationBean;
 import com.openclassrooms.tourguide.model.beans.ProviderBean;
 import com.openclassrooms.tourguide.model.beans.VisitedLocationBean;
 import com.openclassrooms.tourguide.model.user.User;
@@ -11,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 @RestController
@@ -40,9 +44,9 @@ public class TourGuideController {
     // The reward points for visiting each Attraction.
     //    Note: Attraction reward points can be gathered from RewardsCentral
     @RequestMapping("/getNearbyAttractions")
-    public String getNearbyAttractions(@RequestParam String userName) throws ExecutionException, InterruptedException {
+    public List<AttractionBean> getNearbyAttractions(@RequestParam String userName) throws ExecutionException, InterruptedException {
         VisitedLocationBean visitedLocation = tourGuideService.getUserLocation(getUser(userName));
-        return JsonStream.serialize(tourGuideService.getNearByAttractions(visitedLocation));
+        return tourGuideService.getNearByAttractions(visitedLocation);
     }
 
     @RequestMapping("/getRewards")
@@ -51,7 +55,7 @@ public class TourGuideController {
     }
 
     @RequestMapping("/getAllCurrentLocations")
-    public String getAllCurrentLocations() {
+    public Map<UUID, LocationBean> getAllCurrentLocations() {
         // TODO: Get a list of every user's most recent location as JSON
         //- Note: does not use gpsUtil to query for their current location,
         //        but rather gathers the user's current location from their stored location history.
@@ -61,8 +65,8 @@ public class TourGuideController {
         //        "019b04a9-067a-4c76-8817-ee75088c3822": {"longitude":-48.188821,"latitude":74.84371}
         //        ...
         //     }
-
-        return JsonStream.serialize("");
+        Map<UUID, LocationBean> allUsersLastVisitedLocation = tourGuideService.getAllUsersLastVisitedLocation();
+        return allUsersLastVisitedLocation;
     }
 
     @RequestMapping("/getTripDeals")
