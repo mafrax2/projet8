@@ -87,7 +87,13 @@ public class RewardsService {
         map.forEach((k, v) -> {
             rewardFutures.add(
                     CompletableFuture.runAsync(() -> {
-                        v.stream().forEach(t -> k.addUserReward(new UserReward(t.getVisitedLocationBean(), t.getAttractionBean(), getRewardPoints(t.getAttractionBean(), k))));
+                        v.stream().forEach(t -> {
+                            try {
+                                k.addUserReward(new UserReward(t.getVisitedLocationBean(), t.getAttractionBean(), getRewardPoints(t.getAttractionBean(), k)));
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        });
                     }, executor));
         });
 
@@ -115,14 +121,17 @@ public class RewardsService {
     }
 
 
-    public int getRewardPoints(AttractionBean attraction, User user) {
+    public int getRewardPoints(AttractionBean attraction, User user) throws InterruptedException {
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
         int attractionRewardPoints = 0;
         try {
             attractionRewardPoints = rewardsCentral.getAttractionRewardPoints(attraction.attractionId, user.getUserId());
         } catch (RetryableException exception) {
-            exception.retryAfter();
+            Thread.currentThread().sleep(200);
+        }
+        while (attractionRewardPoints == 0) {
+            attractionRewardPoints = getRewardPoints(attraction, user);
         }
         stopWatch.stop();
 

@@ -76,7 +76,13 @@ public class TestRewardsService {
 
         User user = tourGuideService.getAllUsers().get(0);
         List<RewardTuple> rewardTuples = rewardsService.calculateRewards(user);
-        rewardTuples.stream().forEach(t -> user.addUserReward(new UserReward(t.getVisitedLocationBean(), t.getAttractionBean(), rewardsService.getRewardPoints(t.getAttractionBean(), user))));
+        rewardTuples.stream().forEach(t -> {
+            try {
+                user.addUserReward(new UserReward(t.getVisitedLocationBean(), t.getAttractionBean(), rewardsService.getRewardPoints(t.getAttractionBean(), user)));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
         List<UserReward> userRewards = tourGuideService.getUserRewards(user);
 
         assertEquals(gpsUtil.getAttractions().size(), userRewards.size());

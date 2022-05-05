@@ -62,7 +62,7 @@ public class TestPerformance {
 //		GpsUtil gpsUtil = new GpsUtil();
 		RewardsService rewardsService = new RewardsService(gpsUtil, rewardCentralProxy);
 		// Users should be incremented up to 100,000, and test finishes within 15 minutes
-		InternalTestHelper.setInternalUserNumber(1000);
+		InternalTestHelper.setInternalUserNumber(100000);
 		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService, triPricerProxy);
 
 		List<User> allUsers = new ArrayList<>();
@@ -88,7 +88,7 @@ public class TestPerformance {
 		RewardsService rewardsService = new RewardsService(gpsUtil, rewardCentralProxy);
 
 		// Users should be incremented up to 100,000, and test finishes within 20 minutes
-		InternalTestHelper.setInternalUserNumber(1000);
+		InternalTestHelper.setInternalUserNumber(100000);
 		StopWatch stopWatch = new StopWatch();
 		stopWatch.start();
 		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService, triPricerProxy);

@@ -11,6 +11,7 @@ import com.openclassrooms.tourguide.model.user.User;
 import com.openclassrooms.tourguide.model.user.UserReward;
 import com.openclassrooms.tourguide.proxies.GpsUtilProxy;
 import com.openclassrooms.tourguide.proxies.TriPricerProxy;
+import feign.RetryableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -99,13 +100,22 @@ public class TourGuideService {
 
 		for (User user: users
 			 ) {
-			CompletableFuture future = CompletableFuture.supplyAsync(() -> gpsUtil.getUserLocation(user.getUserId()), executor)
+			CompletableFuture future = CompletableFuture.supplyAsync(() ->
+						gpsUtil.getUserLocation(user.getUserId())
+					)
 					.thenAccept(v -> {
 						user.addToVisitedLocations((v));
 					})
 					.thenRun(() -> {
 						try {
-							rewardsService.calculateRewards(user);
+							List<RewardTuple> rewardTuples = rewardsService.calculateRewards(user);
+							rewardTuples.stream().forEach(t -> {
+								try {
+									user.addUserReward(new UserReward(t.getVisitedLocationBean(), t.getAttractionBean(), rewardsService.getRewardPoints(t.getAttractionBean(), user)));
+								} catch (InterruptedException e) {
+									e.printStackTrace();
+								}
+							});
 						} catch (InterruptedException | ExecutionException e) {
 							e.printStackTrace();
 						}
@@ -123,12 +133,28 @@ public class TourGuideService {
 
 	}
 
+	public VisitedLocationBean getUserLocation(UUID userId){
+		VisitedLocationBean userLocation= new VisitedLocationBean();
+		try {
+			userLocation = gpsUtil.getUserLocation(userId);
+		} catch (RetryableException e){
+			e.retryAfter();
+		}
+		return userLocation;
+	}
+
 	public VisitedLocationBean trackUserLocation(User user) throws ExecutionException, InterruptedException {
 
 		VisitedLocationBean visitedLocation = gpsUtil.getUserLocation(user.getUserId());
 		user.addToVisitedLocations(visitedLocation);
 		List<RewardTuple> rewardTuples = rewardsService.calculateRewards(user);
-		rewardTuples.stream().forEach(t -> user.addUserReward(new UserReward(t.getVisitedLocationBean(), t.getAttractionBean(), rewardsService.getRewardPoints(t.getAttractionBean(), user))));
+		rewardTuples.stream().forEach(t -> {
+			try {
+				user.addUserReward(new UserReward(t.getVisitedLocationBean(), t.getAttractionBean(), rewardsService.getRewardPoints(t.getAttractionBean(), user)));
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		});
 
 
 		return visitedLocation;
