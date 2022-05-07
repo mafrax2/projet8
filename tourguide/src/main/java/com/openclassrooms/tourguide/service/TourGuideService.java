@@ -187,7 +187,7 @@ public class TourGuideService {
 			
 			internalUserMap.put(userName, user);
 		});
-		logger.debug("Created " + InternalTestHelper.getInternalUserNumber() + " internal test users.");
+		logger.info("Created " + InternalTestHelper.getInternalUserNumber() + " internal test users.");
 	}
 	
 	private void generateUserLocationHistory(User user) {
